@@ -4,22 +4,21 @@ services:
     build:
       context: .
       dockerfile: resources/docker/Dockerfile.app
-    command: bash -c 'go run main.go'
     expose:
       - 8080
     ports:
       - "8080:8080"
-#   web:
-#     build:
-#       context: .
-#       dockerfile: resources/docker/Dockerfile.web
-#     links:
-#       - "app:app"
-#     ports:
-#       - "80:80"
-#     depends_on:
-#       - app
-#     volumes:
-#       - ./view/build:/usr/share/nginx/html
-#       - ./resources/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-#     command: ["/bin/bash", "-c", "nginx -g \"daemon off;\""]
+  web:
+    build:
+      context: .
+      dockerfile: resources/docker/Dockerfile.web
+    links:
+      - "app:app"
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+    volumes:
+      - ./view/build:/usr/share/nginx/html
+      - ./resources/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    command: ["/bin/bash", "-c", "nginx -g \"daemon off;\""]

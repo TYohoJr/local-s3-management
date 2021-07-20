@@ -1,8 +1,14 @@
 FROM golang:1.15
 
 ENV GOPATH /go
-WORKDIR $GOPATH/src/app
 ENV GO111MODULE=on
 ENV PORT=8080
-# COPY . .
-# RUN chmod +x s3manager
+
+WORKDIR $GOPATH/src/app
+
+COPY controller/ ./controller
+COPY model/ ./model
+COPY go.* .
+COPY main.go .
+
+CMD ["/bin/bash", "-c", "go run main.go"]
