@@ -21,7 +21,7 @@ type Server struct {
 
 func (s *Server) Initialize() {
 	s.initializeRoutes()
-	fmt.Printf("Backend successfully initialized and will now listen on port %v", serverPort)
+	fmt.Println("Backend successfully initialized")
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", serverPort), s.Router))
 }
 

@@ -1,12 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"s3manager/controller"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	fmt.Println("hello")
+	godotenv.Load()
 	s := controller.Server{}
 	s.Initialize()
 }
