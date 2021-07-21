@@ -10,6 +10,6 @@ func main() {
 	// Load environment variables from .env file
 	godotenv.Load()
 	// Initialize server and start listening
-	s := controller.Server{}
+	s := controller.NewServer()
 	s.Initialize()
 }

@@ -19,6 +19,13 @@ type Server struct {
 	Router chi.Router
 }
 
+func NewServer() *Server {
+	s := Server{}
+	r := chi.NewRouter()
+	s.Router = r
+	return &s
+}
+
 func (s *Server) Initialize() {
 	s.initializeRoutes()
 	fmt.Println("Backend successfully initialized and listening")
@@ -26,7 +33,6 @@ func (s *Server) Initialize() {
 }
 
 func (s *Server) initializeRoutes() {
-	s.Router = chi.NewRouter()
 	s.Router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"OPTIONS", "GET", "POST", "PUT", "DELETE"},
