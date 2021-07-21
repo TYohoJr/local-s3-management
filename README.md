@@ -6,7 +6,17 @@ Created for CIS-2790-NET01 Systems Analyst Simulation
 
 _*POC/Demo application only, not for production use_
 
-## How To Run Locally
+## How To Run
+
+Add a `.env` file to the root of the project with your AWS credentials
+
+```txt
+AWS_ACCESS_KEY_ID=xxx
+AWS_SECRET_ACCESS_KEY=xxx
+AWS_DEFAULT_REGION=us-east-1
+```
+
+Run the following commands to launch the application
 
 ```sh
 cd s3-local-management/view
