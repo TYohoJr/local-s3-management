@@ -15,7 +15,7 @@ class App extends Component {
       showNoObjs: false,
       showDeletedObj: false,
       showError: false,
-      errorMsg: ""
+      errorMsg: "Unkown error occurred"
     }
   }
 
@@ -72,6 +72,18 @@ class App extends Component {
       headers: {
         "content-type": "application/json",
       },
+    })
+    .then(async (resp) => {
+      if (resp.status != 200) {
+        resp.text().then((text) => {
+          this.setState({ errorMsg: text }, () => {
+            this.setState({ showError: true }, () => {
+              
+            })
+          })
+        })
+      }
+      return resp
     })
       .then(async res => ({
         filename: this.fileNameFromCDHeader(res.headers.get('content-disposition')),

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 
 	"s3manager/model"
 
@@ -38,13 +39,13 @@ func (s *Server) ObjectRouter(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		bucketName := chi.URLParam(r, "bucketName")
 		objKey := chi.URLParam(r, "objKey")
-		resp, filename, err := s.getObject(bucketName, objKey)
+		resp, filename, contentType, err := s.getObject(bucketName, objKey)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", *filename))
-		w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
+		w.Header().Set("Content-Type", *contentType)
 		w.WriteHeader(200)
 		io.Copy(w, resp)
 		resp.Close()
@@ -67,7 +68,7 @@ func (s *Server) getObjects(bucketName string) ([]model.Object, error) {
 		Region: aws.String(awsRegion),
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create new AWS session: %v", err)
 	}
 	svc := s3.New(sess)
 	input := &s3.ListObjectsInput{
@@ -75,7 +76,7 @@ func (s *Server) getObjects(bucketName string) ([]model.Object, error) {
 	}
 	result, err := svc.ListObjects(input)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to call AWS api to ListObjects: %v", err)
 	}
 	output := []model.Object{}
 	for _, o := range result.Contents {
@@ -88,12 +89,16 @@ func (s *Server) getObjects(bucketName string) ([]model.Object, error) {
 	return output, nil
 }
 
-func (s *Server) getObject(bucketName string, objKey string) (io.ReadCloser, *string, error) {
+func (s *Server) getObject(bucketName string, objKey string) (io.ReadCloser, *string, *string, error) {
+	objKey, err := url.QueryUnescape(objKey)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to unescape objKey from URL: %v", err)
+	}
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(awsRegion),
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, fmt.Errorf("failed to create new AWS session: %v", err)
 	}
 	svc := s3.New(sess)
 	input := &s3.GetObjectInput{
@@ -102,17 +107,21 @@ func (s *Server) getObject(bucketName string, objKey string) (io.ReadCloser, *st
 	}
 	result, err := svc.GetObject(input)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, fmt.Errorf("failed to call AWS api to GetObject: %v", err)
 	}
-	return result.Body, &objKey, nil
+	return result.Body, &objKey, result.ContentType, nil
 }
 
 func (s *Server) deleteObject(bucketName string, objKey string) error {
+	objKey, err := url.QueryUnescape(objKey)
+	if err != nil {
+		return fmt.Errorf("failed to unescape objKey from URL: %v", err)
+	}
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(awsRegion),
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create new AWS session: %v", err)
 	}
 	svc := s3.New(sess)
 	input := &s3.DeleteObjectInput{
@@ -121,7 +130,7 @@ func (s *Server) deleteObject(bucketName string, objKey string) error {
 	}
 	_, err = svc.DeleteObject(input)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to call AWS api to DeleteObject: %v", err)
 	}
 	return nil
 }

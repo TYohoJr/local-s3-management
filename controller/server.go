@@ -21,7 +21,7 @@ type Server struct {
 
 func (s *Server) Initialize() {
 	s.initializeRoutes()
-	fmt.Println("Backend successfully initialized")
+	fmt.Println("Backend successfully initialized and listening")
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", serverPort), s.Router))
 }
 
@@ -36,12 +36,11 @@ func (s *Server) initializeRoutes() {
 		Debug:            false,
 	}))
 	s.Router.Use(render.SetContentType(render.ContentTypeJSON))
+	// Create backend endpoints for the frontend to consume
 	s.Router.Route("/api/buckets", func(r chi.Router) {
 		r.Get("/", s.BucketsRouter)
 	})
 	s.Router.Route("/api/objects", func(r chi.Router) {
-		r.Post("/", s.BucketsRouter)
-
 		r.Route("/bucket/{bucketName}", func(r chi.Router) {
 			r.Get("/", s.ObjectsRouter)
 			r.Route("/key/{objKey}", func(r chi.Router) {

@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"s3manager/model"
 
@@ -35,13 +36,13 @@ func (s *Server) getAllBuckets() ([]model.Bucket, error) {
 		Region: aws.String(awsRegion),
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create new AWS session: %v", err)
 	}
 	input := &s3.ListBucketsInput{}
 	svc := s3.New(sess)
 	result, err := svc.ListBuckets(input)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to call AWS api to ListBuckets: %v", err)
 	}
 	output := []model.Bucket{}
 	for _, b := range result.Buckets {
