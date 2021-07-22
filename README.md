@@ -8,15 +8,20 @@ _*POC/Demo application only, not for production use_
 
 ## Functionality
 
-Complete CRUD ability on AWS Buckets and their Objects
+### Complete CRUD ability on AWS Buckets and their Objects
 
 Get all Buckets
+
 Create a Bucket
+
 Delete a Bucket
 
 Get all Objects
+
 Download an Object
+
 Upload an Object
+
 Delete an Object
 
 ## How To Run
