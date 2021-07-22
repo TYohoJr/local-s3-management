@@ -49,9 +49,12 @@ func (s *Server) initializeRoutes() {
 	s.Router.Route("/api/objects", func(r chi.Router) {
 		r.Route("/bucket/{bucketName}", func(r chi.Router) {
 			r.Get("/", s.ObjectsRouter)
+			r.Post("/", s.BucketsRouter)
+			r.Delete("/", s.BucketsRouter)
 			r.Route("/key/{objKey}", func(r chi.Router) {
 				r.Delete("/", s.ObjectRouter)
 				r.Get("/", s.ObjectRouter)
+				r.Post("/", s.ObjectRouter)
 			})
 		})
 	})

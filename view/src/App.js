@@ -3,6 +3,7 @@ import Button from 'react-bootstrap/Button';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
 import Alert from 'react-bootstrap/Alert';
 import Modal from 'react-bootstrap/Modal';
+import Form from 'react-bootstrap/Form';
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -15,7 +16,15 @@ class App extends Component {
       showNoObjs: false,
       showDeletedObj: false,
       showError: false,
-      errorMsg: "Unkown error occurred"
+      errorMsg: "Unkown error occurred",
+      showUpload: false,
+      showSuccessUpload: false,
+      selectedBucket: "",
+      selectedFile: null,
+      showCreateBucket: false,
+      createBucketName: "",
+      showSuccessBucket: false,
+      showDeletedBucket: false
     }
   }
 
@@ -58,7 +67,7 @@ class App extends Component {
         })
       } else {
         let respJSON = await resp.json();
-        this.setState({ objects: respJSON });
+        this.setState({ objects: respJSON, selectedBucket: bcktName });
         if (respJSON.length == 0) {
           this.setState({ showNoObjs: true })
         }
@@ -73,18 +82,18 @@ class App extends Component {
         "content-type": "application/json",
       },
     })
-    .then(async (resp) => {
-      if (resp.status != 200) {
-        resp.text().then((text) => {
-          this.setState({ errorMsg: text }, () => {
-            this.setState({ showError: true }, () => {
-              
+      .then(async (resp) => {
+        if (resp.status != 200) {
+          resp.text().then((text) => {
+            this.setState({ errorMsg: text }, () => {
+              this.setState({ showError: true }, () => {
+
+              })
             })
           })
-        })
-      }
-      return resp
-    })
+        }
+        return resp
+      })
       .then(async res => ({
         filename: this.fileNameFromCDHeader(res.headers.get('content-disposition')),
         blob: await res.blob(),
@@ -138,6 +147,81 @@ class App extends Component {
     })
   };
 
+  uploadFile = async (bcktName, file) => {
+    await fetch("/api/objects/bucket/" + encodeURIComponent(bcktName) + "/key/" + encodeURIComponent(file.name), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: file
+    }).then((resp) => {
+      if (resp.status != 201) {
+        resp.text().then((text) => {
+          this.setState({ errorMsg: text }, () => {
+            this.setState({ showUpload: false }, () => {
+              this.setState({ showError: true })
+            })
+          })
+        })
+      } else {
+        this.setState({ showUpload: false, showSuccessUpload: true });
+        this.getObjects(bcktName);
+      }
+    })
+  };
+
+  createBucket = async (bcktName) => {
+    await fetch("/api/objects/bucket/" + encodeURIComponent(bcktName), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+    }).then((resp) => {
+      if (resp.status != 201) {
+        resp.text().then((text) => {
+          this.setState({ errorMsg: text }, () => {
+            this.setState({ showCreateBucket: false }, () => {
+              this.setState({ showError: true })
+            })
+          })
+        })
+      } else {
+        this.setState({ showCreateBucket: false, showSuccessBucket: true });
+        this.getBuckets();
+      }
+    })
+  };
+
+  deleteBucket = async (bcktName) => {
+    await fetch("/api/objects/bucket/" + encodeURIComponent(bcktName), {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+      },
+    }).then((resp) => {
+      if (resp.status != 204) {
+        resp.text().then((text) => {
+          this.setState({ errorMsg: text }, () => {
+            this.setState({ showError: true })
+          })
+        })
+      } else {
+        this.setState({ showDeletedBucket: true });
+        this.getBuckets();
+      }
+    })
+  };
+
+  changeFile = async (e) => {
+    if (e.target.files.length > 0) {
+      this.setState({ selectedFile: e.target.files[0] })
+    }
+  };
+
+  changeBucketName = async (e) => {
+    this.setState({ createBucketName: e.target.value })
+  };
+
   render() {
     return (
       <div className="App">
@@ -161,11 +245,24 @@ class App extends Component {
                           >
                             View Objects
                           </Button>{' '}
+                          <Button
+                            variant="danger"
+                            onClick={() => this.deleteBucket(bckt["bucket_name"])}
+                          >
+                            Delete
+                          </Button>{' '}
                         </ButtonGroup>
                       </Alert >{' '}
                     </div>
                   );
                 })}
+                <br />
+                <Button
+                  variant="warning"
+                  onClick={() => this.setState({ showCreateBucket: true })}
+                >
+                  Create Bucket
+                </Button>
               </div>
             ) : (
               <div>
@@ -198,6 +295,13 @@ class App extends Component {
                 })}
                 <br />
                 <Button
+                  variant="warning"
+                  onClick={() => this.setState({ showUpload: true })}
+                >
+                  Upload File
+                </Button>
+                <br />
+                <Button
                   variant="secondary"
                   onClick={() => this.setState({ objects: [] })}
                 >
@@ -207,6 +311,50 @@ class App extends Component {
             )}
             <br />
             <br />
+            <Modal
+              show={this.state.showUpload}
+              size="lg"
+              aria-labelledby="contained-modal-title-vcenter"
+              centered
+            >
+              <Modal.Body>
+                <Form.Group controlId="formFile" className="mb-3">
+                  <Form.Label>Upload File</Form.Label>
+                  <Form.Control
+                    type="file"
+                    onChange={this.changeFile}
+                  />
+                </Form.Group>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button onClick={() => this.uploadFile(this.state.selectedBucket, this.state.selectedFile)}>Upload</Button>
+                <Button onClick={() => this.setState({ showUpload: false })}>Cancel</Button>
+              </Modal.Footer>
+            </Modal>
+            {/*  */}
+            <Modal
+              show={this.state.showCreateBucket}
+              size="lg"
+              aria-labelledby="contained-modal-title-vcenter"
+              centered
+            >
+              <Modal.Body>
+                <Form.Group controlId="formFile" className="mb-3">
+                  <Form.Label>Create Bucket</Form.Label>
+                  <Form.Control
+                    type='text'
+                    name='bucket'
+                    placeholder='Enter Bucket Name'
+                    onChange={this.changeBucketName}
+                  />
+                </Form.Group>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button onClick={() => this.createBucket(this.state.createBucketName)}>Create</Button>
+                <Button onClick={() => this.setState({ showCreateBucket: false })}>Cancel</Button>
+              </Modal.Footer>
+            </Modal>
+            {/*  */}
             <Modal
               show={this.state.showNoObjs}
               size="lg"
@@ -231,6 +379,45 @@ class App extends Component {
               </Modal.Body>
               <Modal.Footer>
                 <Button onClick={() => this.setState({ showDeletedObj: false })}>Close</Button>
+              </Modal.Footer>
+            </Modal>
+            <Modal
+              show={this.state.showDeletedBucket}
+              size="lg"
+              aria-labelledby="contained-modal-title-vcenter"
+              centered
+            >
+              <Modal.Body>
+                <h4>Bucket deleted successfully</h4>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button onClick={() => this.setState({ showDeletedBucket: false })}>Close</Button>
+              </Modal.Footer>
+            </Modal>
+            <Modal
+              show={this.state.showSuccessUpload}
+              size="lg"
+              aria-labelledby="contained-modal-title-vcenter"
+              centered
+            >
+              <Modal.Body>
+                <h4>Object uploaded successfully</h4>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button onClick={() => this.setState({ showSuccessUpload: false })}>Close</Button>
+              </Modal.Footer>
+            </Modal>
+            <Modal
+              show={this.state.showSuccessBucket}
+              size="lg"
+              aria-labelledby="contained-modal-title-vcenter"
+              centered
+            >
+              <Modal.Body>
+                <h4>Bucket created successfully</h4>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button onClick={() => this.setState({ showSuccessBucket: false })}>Close</Button>
               </Modal.Footer>
             </Modal>
             <Modal

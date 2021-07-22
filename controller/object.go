@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 
 	"s3manager/model"
 
@@ -31,6 +32,7 @@ func (s *Server) ObjectsRouter(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(respJSON)
+		return
 	}
 }
 
@@ -49,6 +51,7 @@ func (s *Server) ObjectRouter(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		io.Copy(w, resp)
 		resp.Close()
+		return
 	case "DELETE":
 		bucketName := chi.URLParam(r, "bucketName")
 		objKey := chi.URLParam(r, "objKey")
@@ -60,6 +63,36 @@ func (s *Server) ObjectRouter(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(204)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte("Object deleted"))
+		return
+	case "POST":
+		bucketName := chi.URLParam(r, "bucketName")
+		objKey := chi.URLParam(r, "objKey")
+		objKey, err := url.QueryUnescape(objKey)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		defer r.Body.Close()
+		out, err := os.Create(objKey)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		defer out.Close()
+		_, err = io.Copy(out, r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		err = s.uploadObject(bucketName, objKey, objKey)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		w.WriteHeader(201)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte("Object deleted"))
+		return
 	}
 }
 
@@ -94,6 +127,10 @@ func (s *Server) getObject(bucketName string, objKey string) (io.ReadCloser, *st
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to unescape objKey from URL: %v", err)
 	}
+	bucketName, err = url.QueryUnescape(bucketName)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to unescape bucketName from URL: %v", err)
+	}
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(awsRegion),
 	})
@@ -117,6 +154,10 @@ func (s *Server) deleteObject(bucketName string, objKey string) error {
 	if err != nil {
 		return fmt.Errorf("failed to unescape objKey from URL: %v", err)
 	}
+	bucketName, err = url.QueryUnescape(bucketName)
+	if err != nil {
+		return fmt.Errorf("failed to unescape bucketName from URL: %v", err)
+	}
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(awsRegion),
 	})
@@ -131,6 +172,38 @@ func (s *Server) deleteObject(bucketName string, objKey string) error {
 	_, err = svc.DeleteObject(input)
 	if err != nil {
 		return fmt.Errorf("failed to call AWS api to DeleteObject: %v", err)
+	}
+	return nil
+}
+
+func (s *Server) uploadObject(bucketName string, objKey string, filename string) error {
+	objKey, err := url.QueryUnescape(objKey)
+	if err != nil {
+		return fmt.Errorf("failed to unescape objKey from URL: %v", err)
+	}
+	bucketName, err = url.QueryUnescape(bucketName)
+	if err != nil {
+		return fmt.Errorf("failed to unescape bucketName from URL: %v", err)
+	}
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String(awsRegion),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create new AWS session: %v", err)
+	}
+	file, err := os.Open(filename)
+	if err != nil {
+		return fmt.Errorf("failed to open temp file: %v", err)
+	}
+	svc := s3.New(sess)
+	input := &s3.PutObjectInput{
+		Body:   file,
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(objKey),
+	}
+	_, err = svc.PutObject(input)
+	if err != nil {
+		return fmt.Errorf("failed to call AWS api to PutObject: %v", err)
 	}
 	return nil
 }
