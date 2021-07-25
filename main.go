@@ -9,7 +9,7 @@ import (
 func main() {
 	// Load environment variables from .env file
 	godotenv.Load()
-	// Initialize server and start listening
+	// Create new server, initialize it, and start lsitening for client requests
 	s := controller.NewServer()
 	s.Initialize()
 }

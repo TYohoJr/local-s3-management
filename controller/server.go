@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
-	"github.com/go-chi/cors"
 	"github.com/go-chi/render"
 )
 
@@ -27,21 +26,15 @@ func NewServer() *Server {
 }
 
 func (s *Server) Initialize() {
+	// Default to use JSON as content type
+	s.Router.Use(render.SetContentType(render.ContentTypeJSON))
 	s.initializeRoutes()
 	fmt.Println("Backend successfully initialized and listening")
+	// Start listening for requests from clients
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", serverPort), s.Router))
 }
 
 func (s *Server) initializeRoutes() {
-	s.Router.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"OPTIONS", "GET", "POST", "PUT", "DELETE"},
-		AllowedHeaders:   []string{"Access-Control-Allow-Headers", "Accept", "Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization"},
-		AllowCredentials: true,
-		MaxAge:           300,
-		Debug:            false,
-	}))
-	s.Router.Use(render.SetContentType(render.ContentTypeJSON))
 	// Create backend endpoints for the frontend to consume
 	s.Router.Route("/api/buckets", func(r chi.Router) {
 		r.Get("/", s.BucketsRouter)
